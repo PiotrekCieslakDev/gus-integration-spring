@@ -159,11 +159,10 @@
                 <configuration>
                     <schemaLanguage>WSDL</schemaLanguage>
                     <generatePackage>com.piotrcieslak.gus.wsdl</generatePackage>
-                    <schemas>
-                        <schema>
-                            <url>https://wyszukiwarkaregontest.stat.gov.pl/wsBIR/wsdl/UslugaBIRzewnPubl-ver11-test.wsdl</url>
-                        </schema>
-                    </schemas>
+                    <schemaDirectory>src/main/resources/wsdl</schemaDirectory>
+                    <schemaIncludes>
+                        <include>*.wsdl</include>
+                    </schemaIncludes>
                 </configuration>
             </plugin>
         </plugins>

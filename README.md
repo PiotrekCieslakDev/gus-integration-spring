@@ -20,6 +20,7 @@ Built with a focus on **reliability**, **scalability**, and **modern Java featur
 ## 🛠️ Tech Stack
 
 * **Runtime:** Java 25
+* **JDK:** Microsoft OpenJDK 25
 * **Framework:** Spring Boot 3.5.14
 * **Communication:** Spring Web Services & JAXB (SOAP), Jackson (XML/JSON)
 * **Resilience:** Resilience4j (Spring Cloud Circuit Breaker)
@@ -44,7 +45,7 @@ Set your key using: export GUS_API_KEY="your_secret_api_key"
 
 ### Installation & Execution
 1. **Clone the repository:**
-   git clone https://github.com/yourusername/gus-integration-spring.git
+   git clone https://github.com/piotrekcieslakdev/gus-integration-spring.git
 2. **Build the project:** (Includes JAXB class generation from WSDL)
    mvn clean install
 3. **Run the application:**
