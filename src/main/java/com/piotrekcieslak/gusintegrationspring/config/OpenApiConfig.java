@@ -11,7 +11,7 @@ public class OpenApiConfig {
     public OpenAPI customOpenAPI() {
         return new OpenAPI().info(new Info()
                 .title("GUS Integration API")
-                .description("Bramka SOAP -> REST dla REGON BIR 1.1")
+                .description("Bramka SOAP -> REST dla REGON BIR 1.1/1.2")
                 .version("1.0"));
     }
 }

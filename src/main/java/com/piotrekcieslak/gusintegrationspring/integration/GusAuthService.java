@@ -1,6 +1,8 @@
 package com.piotrekcieslak.gusintegrationspring.integration;
 
 import com.piotrcieslak.gus.wsdl.*;
+import com.piotrekcieslak.gusintegrationspring.exception.GusAuthException;
+import jakarta.xml.bind.JAXBElement;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,7 +32,7 @@ public class GusAuthService {
         );
 
         return Optional.ofNullable(response.getZalogujResult())
-                .map(jakarta.xml.bind.JAXBElement::getValue)
-                .orElseThrow(() -> new RuntimeException("GUS: Logowanie nieudane."));
+                .map(JAXBElement::getValue)
+                .orElseThrow(() -> new GusAuthException("GUS: Logowanie nieudane."));
     }
 }

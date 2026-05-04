@@ -1,6 +1,7 @@
 package com.piotrekcieslak.gusintegrationspring.controller;
 
 import com.piotrekcieslak.gusintegrationspring.ApiError;
+import com.piotrekcieslak.gusintegrationspring.exception.GusAuthException;
 import com.piotrekcieslak.gusintegrationspring.exception.GusException;
 import com.piotrekcieslak.gusintegrationspring.exception.GusNotFoundException;
 import org.springframework.http.HttpStatus;
@@ -16,9 +17,12 @@ import java.util.Map;
 @RestControllerAdvice
 public class GusExceptionHandler {
 
-    @ExceptionHandler(GusException.class)
+    @ExceptionHandler({
+            GusException.class,
+            GusAuthException.class
+    })
     public ResponseEntity<ApiError> handleGusException(GusException ex, HttpServletRequest request) {
-        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), request);
     }
 
     @ExceptionHandler(GusNotFoundException.class)
