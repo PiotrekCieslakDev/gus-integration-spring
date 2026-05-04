@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: gus-integration-spring
+  cloud:
+    compatibility-verifier:
+      enabled: false
+  cache:
+    cache-names: gus-session
+    caffeine:
+      spec: expireAfterWrite=55m # GUS sesh invalidates after 1 hour, revalidate after 55 mins
+
+gus:
+  api:
+    url: https://wyszukiwarkaregon.stat.gov.pl/wsBIR/UslugaBIRzewnPubl.svc # production url -
+    key: d519232a8b5c47529918 # production key
+
+resilience4j:
+  retry:
+    instances:
+      gusApi:
+        maxAttempts: 3
+        waitDuration: 1s # Wait 1 sec before retry
+  circuitbreaker:
+    instances:
+      gusApi:
+        registerHealthIndicator: true # Actuator for monitoring traffic
+        slidingWindowSize: 10
+        failureRateThreshold: 50 # If 50% of requests fail, go for safety
+        waitDurationInOpenState: 10s # After 10 secs, try to reopen connections
