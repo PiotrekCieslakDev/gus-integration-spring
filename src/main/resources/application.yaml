@@ -1,15 +1,15 @@
 spring:
+  profiles:
+    active: prod
   application:
     name: gus-integration-spring
+  cloud:
+    compatibility-verifier:
+      enabled: false
   cache:
     cache-names: gus-session
     caffeine:
       spec: expireAfterWrite=55m # GUS sesh invalidates after 1 hour, revalidate after 55 mins
-
-gus:
-  api:
-    url: https://wyszukiwarkaregontest.stat.gov.pl/wsBIR/UslugaBIRzewnPubl.svc # Open test sandbox url -
-    key: abcde12345abcde12345 # Open test sandbox key
 
 resilience4j:
   retry:
@@ -17,6 +17,8 @@ resilience4j:
       gusApi:
         maxAttempts: 3
         waitDuration: 1s # Wait 1 sec before retry
+        ignoreExceptions:
+          - com.piotrekcieslak.gusintegrationspring.exception.GusNotFoundException
   circuitbreaker:
     instances:
       gusApi:
@@ -24,3 +26,5 @@ resilience4j:
         slidingWindowSize: 10
         failureRateThreshold: 50 # If 50% of requests fail, go for safety
         waitDurationInOpenState: 10s # After 10 secs, try to reopen connections
+        ignoreExceptions:
+          - com.piotrekcieslak.gusintegrationspring.exception.GusNotFoundException

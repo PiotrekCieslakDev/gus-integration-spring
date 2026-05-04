@@ -6,6 +6,7 @@ import com.piotrekcieslak.gusintegrationspring.dto.CompanyDto;
 import com.piotrekcieslak.gusintegrationspring.dto.CompanyResponse;
 import com.piotrekcieslak.gusintegrationspring.dto.FullCompanyDto;
 import com.piotrekcieslak.gusintegrationspring.dto.FullCompanyWrapper;
+import com.piotrekcieslak.gusintegrationspring.dto.GusErrorResponse;
 import com.piotrekcieslak.gusintegrationspring.exception.GusException;
 import com.piotrekcieslak.gusintegrationspring.exception.GusNotFoundException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
@@ -38,7 +39,7 @@ public class GusSearchService {
     // --- NIP Searching ---
 
     @Retry(name = "gusApi")
-    @CircuitBreaker(name = "gusApi", fallbackMethod = "fallbackBasicSearch")
+    @CircuitBreaker(name = "gusApi")
     public CompanyDto szukajPoNip(String nip) {
         log.info("Rozpoczęcie wyszukiwania podstawowego dla NIP: {}", nip);
         ParametryWyszukiwania p = factory.createParametryWyszukiwania();
@@ -49,7 +50,7 @@ public class GusSearchService {
     // --- REGON Searching ---
 
     @Retry(name = "gusApi")
-    @CircuitBreaker(name = "gusApi", fallbackMethod = "fallbackBasicSearch")
+    @CircuitBreaker(name = "gusApi")
     public CompanyDto szukajPoRegon(String regon) {
         log.info("Rozpoczęcie wyszukiwania podstawowego dla REGON: {}", regon);
         ParametryWyszukiwania p = factory.createParametryWyszukiwania();
@@ -60,14 +61,14 @@ public class GusSearchService {
     // --- Full responses ---
 
     @Retry(name = "gusApi")
-    @CircuitBreaker(name = "gusApi", fallbackMethod = "fallbackFullReport")
+    @CircuitBreaker(name = "gusApi")
     public FullCompanyDto pobierzPelnyRaport(String nip) {
         CompanyDto basic = szukajPoNip(nip);
         return pobierzRaportSzczegolowy(basic);
     }
 
     @Retry(name = "gusApi")
-    @CircuitBreaker(name = "gusApi", fallbackMethod = "fallbackFullReport")
+    @CircuitBreaker(name = "gusApi")
     public FullCompanyDto pobierzPelnyRaportPoRegon(String regon) {
         CompanyDto basic = szukajPoRegon(regon);
         return pobierzRaportSzczegolowy(basic);
@@ -83,6 +84,12 @@ public class GusSearchService {
                 request, msg -> prepareSoapHeaders(msg, "DaneSzukajPodmioty"));
 
         String rawXml = response.getDaneSzukajPodmiotyResult().getValue();
+        
+        // Check if response contains error structure
+        if (isErrorResponse(rawXml)) {
+            handleErrorResponse(rawXml);
+        }
+        
         CompanyResponse companyResponse = deserialize(rawXml, CompanyResponse.class);
 
         if (companyResponse.getCompanies() == null || companyResponse.getCompanies().isEmpty()) {
@@ -107,6 +114,12 @@ public class GusSearchService {
                 request, msg -> prepareSoapHeaders(msg, "DanePobierzPelnyRaport"));
 
         String fullXml = response.getDanePobierzPelnyRaportResult().getValue();
+        
+        // Check if response contains error structure
+        if (isErrorResponse(fullXml)) {
+            handleErrorResponse(fullXml);
+        }
+        
         FullCompanyDto fullData = deserialize(fullXml, FullCompanyWrapper.class).getData();
 
         // Mapping first request response to the final full dto model
@@ -124,10 +137,20 @@ public class GusSearchService {
         log.error("Awaria połączenia z GUS (Basic Search). Ident: {}, Błąd: {}", identifier, t.getMessage());
         throw new GusException("Usługa wyszukiwania GUS jest chwilowo niedostępna. Spróbuj ponownie później.");
     }
+    
+    public CompanyDto fallbackBasicSearchNotFound(String identifier, GusNotFoundException t) {
+        // Just re-throw the exception without triggering retry
+        throw t;
+    }
 
     public FullCompanyDto fallbackFullReport(String identifier, Throwable t) {
         log.error("Awaria połączenia z GUS (Full Report). Ident: {}, Błąd: {}", identifier, t.getMessage());
         throw new GusException("Nie można pobrać pełnych danych z GUS. System wejdzie w tryb awaryjny.");
+    }
+    
+    public FullCompanyDto fallbackFullReportNotFound(String identifier, GusNotFoundException t) {
+        // Just re-throw the exception without triggering retry
+        throw t;
     }
 
     // --- Helpers ---
@@ -147,6 +170,36 @@ public class GusSearchService {
         } catch (Exception e) {
             log.error("Błąd deserializacji XML do klasy {}: {}", clazz.getSimpleName(), e.getMessage());
             throw new GusException("Błąd podczas przetwarzania danych otrzymanych z GUS.");
+        }
+    }
+    
+    private boolean isErrorResponse(String xml) {
+        return xml.contains("<ErrorCode>") || xml.contains("ErrorCode");
+    }
+    
+    private void handleErrorResponse(String xml) {
+        try {
+            GusErrorResponse errorResponse = deserialize(xml, GusErrorResponse.class);
+            if (errorResponse.getDane() != null) {
+                GusErrorResponse.ErrorData errorData = errorResponse.getDane();
+                String errorCode = errorData.getErrorCode();
+                String errorMessage = errorData.getErrorMessagePl();
+                
+                log.warn("Otrzymano błąd z GUS. Kod: {}, Wiadomość: {}", errorCode, errorMessage);
+                
+                // Handle specific error codes
+                if ("4".equals(errorCode)) {
+                    throw new GusNotFoundException(errorMessage != null ? errorMessage : "Nie znaleziono podmiotu dla podanych kryteriów wyszukiwania.");
+                } else {
+                    throw new GusException(errorMessage != null ? errorMessage : "Błąd podczas komunikacji z usługą GUS.");
+                }
+            }
+        } catch (Exception e) {
+            if (e instanceof GusNotFoundException || e instanceof GusException) {
+                throw e;
+            }
+            log.error("Błąd podczas przetwarzania odpowiedzi błędu GUS: {}", e.getMessage());
+            throw new GusException("Nieoczekiwany błąd podczas komunikacji z usługą GUS.");
         }
     }
 }
