@@ -36,4 +36,7 @@ build/
 ### Properties ###
 application-prod.yaml
 application-test.yaml
+src/main/resources/application-prod.yaml
+src/main/resources/application-test.yaml
+
 
