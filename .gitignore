@@ -32,3 +32,8 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Properties ###
+application-prod.yaml
+application-test.yaml
+
