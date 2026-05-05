@@ -2,6 +2,7 @@ package com.piotrekcieslak.gusintegrationspring.integration;
 
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.piotrcieslak.gus.wsdl.*;
+import com.piotrekcieslak.gusintegrationspring.config.GusRateLimiter;
 import com.piotrekcieslak.gusintegrationspring.dto.CompanyDto;
 import com.piotrekcieslak.gusintegrationspring.dto.CompanyResponse;
 import com.piotrekcieslak.gusintegrationspring.dto.FullCompanyDto;
@@ -28,12 +29,17 @@ public class GusSearchService {
 
     private final WebServiceTemplate webServiceTemplate;
     private final GusAuthService authService;
+    private final GusRateLimiter rateLimiter;
+
     private final XmlMapper xmlMapper = new XmlMapper();
     private final ObjectFactory factory = new ObjectFactory();
 
-    public GusSearchService(WebServiceTemplate webServiceTemplate, GusAuthService authService) {
+    public GusSearchService(WebServiceTemplate webServiceTemplate,
+                            GusAuthService authService,
+                            GusRateLimiter gusRateLimiter) {
         this.webServiceTemplate = webServiceTemplate;
         this.authService = authService;
+        this.rateLimiter = gusRateLimiter;
     }
 
     // --- NIP Searching ---
@@ -80,6 +86,8 @@ public class GusSearchService {
         DaneSzukajPodmioty request = factory.createDaneSzukajPodmioty();
         request.setPParametryWyszukiwania(factory.createDaneSzukajPodmiotyPParametryWyszukiwania(p));
 
+        rateLimiter.waitForToken();
+
         DaneSzukajPodmiotyResponse response = (DaneSzukajPodmiotyResponse) webServiceTemplate.marshalSendAndReceive(
                 request, msg -> prepareSoapHeaders(msg, "DaneSzukajPodmioty"));
 
@@ -109,6 +117,8 @@ public class GusSearchService {
         DanePobierzPelnyRaport request = factory.createDanePobierzPelnyRaport();
         request.setPRegon(factory.createDanePobierzPelnyRaportPRegon(basic.getRegon()));
         request.setPNazwaRaportu(factory.createDanePobierzPelnyRaportPNazwaRaportu(reportName));
+
+        rateLimiter.waitForToken();
 
         DanePobierzPelnyRaportResponse response = (DanePobierzPelnyRaportResponse) webServiceTemplate.marshalSendAndReceive(
                 request, msg -> prepareSoapHeaders(msg, "DanePobierzPelnyRaport"));
